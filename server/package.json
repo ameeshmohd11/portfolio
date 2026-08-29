@@ -1,0 +1,12 @@
+{
+  "name": "facetime-signaling-server",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "signaling-server.js",
+  "scripts": {
+    "start": "node signaling-server.js"
+  },
+  "dependencies": {
+    "socket.io": "^4.8.3"
+  }
+}
