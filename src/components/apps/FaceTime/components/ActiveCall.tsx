@@ -44,7 +44,9 @@ export const ActiveCall: React.FC<ActiveCallProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Position of floating PiP window
-  const [pipPosition, setPipPosition] = useState<"top-right" | "top-left" | "bottom-right" | "bottom-left">("top-right");
+  const [pipPosition, setPipPosition] = useState<
+    "top-right" | "top-left" | "bottom-right" | "bottom-left"
+  >("top-right");
   const [controlsHovered, setControlsHovered] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
@@ -52,7 +54,9 @@ export const ActiveCall: React.FC<ActiveCallProps> = ({
   useEffect(() => {
     if (remoteVideoRef.current && remoteStream) {
       remoteVideoRef.current.srcObject = remoteStream;
-      remoteVideoRef.current.play().catch((e) => console.warn("Remote video autoPlay error:", e));
+      remoteVideoRef.current
+        .play()
+        .catch((e) => console.warn("Remote video autoPlay error:", e));
     }
   }, [remoteStream]);
 
@@ -60,7 +64,9 @@ export const ActiveCall: React.FC<ActiveCallProps> = ({
   useEffect(() => {
     if (localVideoRef.current && localStream) {
       localVideoRef.current.srcObject = localStream;
-      localVideoRef.current.play().catch((e) => console.warn("Local video autoPlay error:", e));
+      localVideoRef.current
+        .play()
+        .catch((e) => console.warn("Local video autoPlay error:", e));
     }
   }, [localStream, isScreenSharing]);
 
@@ -113,21 +119,21 @@ export const ActiveCall: React.FC<ActiveCallProps> = ({
   const getPipPositionClass = () => {
     switch (pipPosition) {
       case "top-left":
-        return "top-14 left-4";
+        return "top-12 left-4";
       case "bottom-left":
-        return "bottom-24 left-4";
+        return "bottom-20 left-4";
       case "bottom-right":
-        return "bottom-24 right-4";
+        return "bottom-20 right-4";
       case "top-right":
       default:
-        return "top-14 right-4";
+        return "top-12 right-4";
     }
   };
 
   return (
     <div
       ref={containerRef}
-      className="relative w-full h-full bg-zinc-950 overflow-hidden select-none flex items-center justify-center"
+      className="relative w-full h-full bg-black overflow-hidden select-none flex items-center justify-center"
     >
       {/* Remote Video (Full Canvas) */}
       {remoteStream && remoteStream.getVideoTracks().length > 0 ? (
@@ -135,49 +141,57 @@ export const ActiveCall: React.FC<ActiveCallProps> = ({
           ref={remoteVideoRef}
           autoPlay
           playsInline
-          className="w-full h-full object-cover"
+          className="w-full h-full object-cover bg-black"
         />
       ) : (
         /* Remote Avatar Fallback if remote video track is off / audio only */
         <div className="flex flex-col items-center justify-center space-y-4">
-          <div className="w-32 h-32 rounded-full overflow-hidden ring-4 ring-white/10 shadow-2xl bg-zinc-800">
+          <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full overflow-hidden ring-4 ring-white/10 shadow-2xl bg-zinc-800">
             <img
-              src={remoteUser.avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${remoteUser.id}`}
+              src={
+                remoteUser.avatar ||
+                `https://api.dicebear.com/7.x/bottts/svg?seed=${remoteUser.id}`
+              }
               alt={remoteUser.name}
               className="w-full h-full object-cover"
             />
           </div>
           <div className="text-center">
-            <h3 className="text-xl font-semibold text-white">{remoteUser.name}</h3>
-            <p className="text-xs text-white/50">FaceTime Audio / Video Muted</p>
+            <h3 className="text-lg font-semibold text-white">{remoteUser.name}</h3>
+            <p className="text-xs text-white/50">FaceTime Audio · Video Off</p>
           </div>
         </div>
       )}
 
       {/* Hidden audio element to ensure remote audio plays */}
-      <audio ref={(audio) => {
-        if (audio && remoteStream && audio.srcObject !== remoteStream) {
-          audio.srcObject = remoteStream;
-          audio.play().catch(() => {});
-        }
-      }} autoPlay />
+      <audio
+        ref={(audio) => {
+          if (audio && remoteStream && audio.srcObject !== remoteStream) {
+            audio.srcObject = remoteStream;
+            audio.play().catch(() => {});
+          }
+        }}
+        autoPlay
+      />
 
       {/* Top Floating Glass Bar */}
       <div
-        className={`absolute top-3 left-0 right-0 px-4 flex items-center justify-between pointer-events-none transition-opacity duration-300 ${
+        className={`absolute top-3 left-0 right-0 px-4 flex items-center justify-between pointer-events-none z-30 transition-opacity duration-300 ${
           controlsHovered ? "opacity-100" : "opacity-0"
         }`}
       >
         {/* User Info & Connection Badge */}
-        <div className="pointer-events-auto flex items-center space-x-2.5 px-3.5 py-1.5 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 shadow-lg text-xs text-white">
+        <div className="pointer-events-auto flex items-center space-x-2 px-3 py-1 rounded-full bg-black/50 backdrop-blur-xl border border-white/15 shadow-lg text-xs text-white">
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="font-medium">{remoteUser.name}</span>
+          <span className="font-medium text-xs">{remoteUser.name}</span>
           <span className="text-white/40">·</span>
-          <span className="text-white/70 font-mono text-[11px]">{formatDuration(callDuration)}</span>
+          <span className="text-white/80 font-mono text-[11px]">
+            {formatDuration(callDuration)}
+          </span>
         </div>
 
         {/* Status Tag */}
-        <div className="pointer-events-auto flex items-center space-x-1.5 px-3 py-1.5 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 shadow-lg text-[11px] text-white/60">
+        <div className="pointer-events-auto flex items-center space-x-1.5 px-3 py-1 rounded-full bg-black/50 backdrop-blur-xl border border-white/15 shadow-lg text-[11px] text-white/70">
           <ShieldCheckIcon className="text-emerald-400" size={13} />
           <span>Encrypted</span>
         </div>
@@ -186,8 +200,7 @@ export const ActiveCall: React.FC<ActiveCallProps> = ({
       {/* Floating Picture-in-Picture (PiP) Local Video Preview */}
       <div
         onClick={cyclePipPosition}
-        title="Click to move video preview"
-        className={`absolute ${getPipPositionClass()} w-40 h-28 sm:w-48 sm:h-34 md:w-56 md:h-38 rounded-2xl overflow-hidden shadow-2xl border-2 border-white/20 bg-zinc-900 cursor-pointer transition-all duration-300 z-20 hover:scale-105 group`}
+        className={`absolute ${getPipPositionClass()} w-28 h-40 sm:w-34 sm:h-48 rounded-2xl overflow-hidden shadow-2xl border border-white/30 bg-zinc-900 cursor-pointer transition-all duration-300 z-20 hover:scale-105 hover:border-white/50 group`}
       >
         {isCameraEnabled && localStream ? (
           <video
@@ -195,41 +208,46 @@ export const ActiveCall: React.FC<ActiveCallProps> = ({
             autoPlay
             playsInline
             muted
-            className={`w-full h-full object-cover ${!isScreenSharing ? "scale-x-[-1]" : ""}`}
+            className={`w-full h-full object-cover bg-zinc-950 ${!isScreenSharing ? "scale-x-[-1]" : ""}`}
           />
         ) : (
-          <div className="w-full h-full flex flex-col items-center justify-center bg-zinc-900 text-white/60 space-y-1">
-            <VideoOffIcon size={22} />
-            <span className="text-[10px]">Camera Off</span>
+          <div className="w-full h-full flex flex-col items-center justify-center bg-zinc-900 text-white/60 space-y-1.5 p-2 text-center">
+            <VideoOffIcon size={20} />
+            <span className="text-[10px] leading-tight">Camera Off</span>
           </div>
         )}
 
         {/* Local Stream Indicators overlay in PiP */}
-        <div className="absolute top-2 left-2 flex items-center space-x-1 pointer-events-none">
+        <div className="absolute top-2 left-2 flex items-center space-x-1 pointer-events-none z-10">
           {isMuted && (
-            <span className="p-1 rounded-md bg-red-600/80 backdrop-blur text-white text-[10px] flex items-center justify-center shadow">
-              <MicOffIcon size={11} />
+            <span className="p-1 rounded-md bg-red-600/90 backdrop-blur text-white text-[10px] flex items-center justify-center shadow">
+              <MicOffIcon size={10} />
             </span>
           )}
           {isScreenSharing && (
-            <span className="p-1 rounded-md bg-blue-600/80 backdrop-blur text-white text-[10px] flex items-center justify-center shadow">
-              <DesktopIcon size={11} />
+            <span className="p-1 rounded-md bg-blue-600/90 backdrop-blur text-white text-[10px] flex items-center justify-center shadow">
+              <DesktopIcon size={10} />
             </span>
           )}
         </div>
 
-        <div className="absolute bottom-1 right-2 text-[9px] text-white/60 bg-black/60 px-1.5 py-0.5 rounded backdrop-blur opacity-0 group-hover:opacity-100 transition-opacity">
-          Move
+        {/* Subtle Corner Swap Hint */}
+        <div className="absolute bottom-1.5 inset-x-0 flex justify-center pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
+          <span className="text-[9px] font-medium text-white/90 bg-black/70 px-2 py-0.5 rounded-full backdrop-blur border border-white/10">
+            Swap Corner
+          </span>
         </div>
       </div>
 
       {/* Floating Bottom macOS Pill Control Bar */}
       <div
-        className={`absolute bottom-4 left-1/2 -translate-x-1/2 z-30 transition-all duration-300 ${
-          controlsHovered ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2 pointer-events-none"
+        className={`absolute bottom-3.5 left-1/2 -translate-x-1/2 z-40 transition-all duration-300 ${
+          controlsHovered
+            ? "opacity-100 translate-y-0"
+            : "opacity-0 translate-y-2 pointer-events-none"
         }`}
       >
-        <div className="flex items-center space-x-3 px-5 py-3 rounded-full bg-zinc-900/80 dark:bg-black/80 backdrop-blur-2xl border border-white/15 shadow-2xl shadow-black/60">
+        <div className="flex items-center space-x-2.5 px-4 py-2 rounded-full bg-black/65 backdrop-blur-2xl border border-white/20 shadow-2xl shadow-black/80">
           {/* Mute Microphone Button */}
           <button
             onClick={onToggleMute}
