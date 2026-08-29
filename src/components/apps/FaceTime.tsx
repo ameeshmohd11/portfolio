@@ -67,6 +67,7 @@ const FaceTime: React.FC = () => {
         />
       ) : callState === "connected" && remoteUser ? (
         <ActiveCall
+          currentUser={currentUser}
           remoteUser={remoteUser}
           localStream={localStream}
           remoteStream={remoteStream}
