@@ -1,5 +1,8 @@
 # About This Site
 
-This site is inspired by macOS [Big Sur](https://www.apple.com/in/macos/big-sur/) and [Catalina](https://www.apple.com/bw/macos/catalina/), developed using [React](https://reactjs.org/), [Zustand](https://zustand-demo.pmnd.rs/) and [UnoCSS](https://uno.antfu.me/), and hosted on [Github Pages](https://pages.github.com/). Some of the icons are generated using [sindresorhus/file-icon-cli](https://github.com/sindresorhus/file-icon-cli).
+Explore an interactive macOS-inspired interface directly from your browser, with draggable windows, built-in apps, system controls, and a real-time communication experience.
 
-The source code is hosted [here](https://github.com/ameeshmohd11).
+The project is built with modern web technologies and uses WebRTC for live audio and video calling, allowing users to connect with friends through their own accounts and usernames.
+
+Built for the web. Designed like an OS.
+

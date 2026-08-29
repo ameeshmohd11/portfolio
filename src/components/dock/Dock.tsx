@@ -24,7 +24,7 @@ export default function Dock({
   }));
 
   const openApp = (id: string) => {
-    if (id === "launchpad") toggleLaunchpad(!showLaunchpad);
+    if (id === "launchpad" || id === "finder") toggleLaunchpad(!showLaunchpad);
     else {
       toggleLaunchpad(false);
       open(id);

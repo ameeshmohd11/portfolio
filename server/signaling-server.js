@@ -5,8 +5,17 @@ const PORT = process.env.PORT || 3001;
 
 const httpServer = createServer((req, res) => {
   if (req.url === "/health" || req.url === "/") {
-    res.writeHead(200, { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" });
-    res.end(JSON.stringify({ status: "ok", service: "FaceTime Signaling Server", timestamp: new Date().toISOString() }));
+    res.writeHead(200, {
+      "Content-Type": "application/json",
+      "Access-Control-Allow-Origin": "*"
+    });
+    res.end(
+      JSON.stringify({
+        status: "ok",
+        service: "FaceTime Signaling Server",
+        timestamp: new Date().toISOString()
+      })
+    );
     return;
   }
   res.writeHead(404);
@@ -69,12 +78,17 @@ io.on("connection", (socket) => {
 
   // Initiate call
   socket.on("call-user", ({ toUserId, fromUser, callType = "video" }) => {
-    console.log(`[Call Initiate] From ${fromUser?.name || fromUser?.id} to user ${toUserId}`);
+    console.log(
+      `[Call Initiate] From ${fromUser?.name || fromUser?.id} to user ${toUserId}`
+    );
     const targetSocketId = userToSocket.get(toUserId);
 
     if (!targetSocketId) {
       console.log(`[Call Failed] Target user ${toUserId} is offline`);
-      socket.emit("call-failed", { reason: "offline", message: "User is currently offline." });
+      socket.emit("call-failed", {
+        reason: "offline",
+        message: "User is currently offline."
+      });
       return;
     }
 
@@ -86,7 +100,9 @@ io.on("connection", (socket) => {
 
   // Accept call
   socket.on("accept-call", ({ toUserId, fromUser }) => {
-    console.log(`[Call Accepted] By ${fromUser?.name || fromUser?.id} for caller ${toUserId}`);
+    console.log(
+      `[Call Accepted] By ${fromUser?.name || fromUser?.id} for caller ${toUserId}`
+    );
     const callerSocketId = userToSocket.get(toUserId);
     if (callerSocketId) {
       io.to(callerSocketId).emit("call-accepted", {
@@ -109,41 +125,46 @@ io.on("connection", (socket) => {
     console.log(`[Call Ended] With ${toUserId}`);
     const peerSocketId = userToSocket.get(toUserId);
     if (peerSocketId) {
-      io.to(peerSocketId).emit("call-ended", { fromUserId: socketToUser.get(socket.id)?.id });
+      io.to(peerSocketId).emit("call-ended", {
+        fromUserId: socketToUser.get(socket.id)?.id
+      });
     }
   });
 
   // WebRTC Offer relay
-  socket.on("webrtc-offer", ({ toUserId, offer }) => {
+  socket.on("webrtc-offer", ({ toUserId, offer, fromUserId }) => {
     const targetSocketId = userToSocket.get(toUserId);
-    const fromUser = socketToUser.get(socket.id);
+    const sender = socketToUser.get(socket.id);
+    const senderId = fromUserId || sender?.id;
     if (targetSocketId) {
       io.to(targetSocketId).emit("webrtc-offer", {
-        fromUserId: fromUser?.id,
+        fromUserId: senderId,
         offer
       });
     }
   });
 
   // WebRTC Answer relay
-  socket.on("webrtc-answer", ({ toUserId, answer }) => {
+  socket.on("webrtc-answer", ({ toUserId, answer, fromUserId }) => {
     const targetSocketId = userToSocket.get(toUserId);
-    const fromUser = socketToUser.get(socket.id);
+    const sender = socketToUser.get(socket.id);
+    const senderId = fromUserId || sender?.id;
     if (targetSocketId) {
       io.to(targetSocketId).emit("webrtc-answer", {
-        fromUserId: fromUser?.id,
+        fromUserId: senderId,
         answer
       });
     }
   });
 
   // WebRTC ICE Candidate relay
-  socket.on("ice-candidate", ({ toUserId, candidate }) => {
+  socket.on("ice-candidate", ({ toUserId, candidate, fromUserId }) => {
     const targetSocketId = userToSocket.get(toUserId);
-    const fromUser = socketToUser.get(socket.id);
+    const sender = socketToUser.get(socket.id);
+    const senderId = fromUserId || sender?.id;
     if (targetSocketId) {
       io.to(targetSocketId).emit("ice-candidate", {
-        fromUserId: fromUser?.id,
+        fromUserId: senderId,
         candidate
       });
     }

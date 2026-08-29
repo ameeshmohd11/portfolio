@@ -5,8 +5,12 @@ const RTC_CONFIG: RTCConfiguration = {
     { urls: "stun:stun.l.google.com:19302" },
     { urls: "stun:stun1.l.google.com:19302" },
     { urls: "stun:stun2.l.google.com:19302" },
-    { urls: "stun:stun3.l.google.com:19302" }
-  ]
+    { urls: "stun:stun3.l.google.com:19302" },
+    { urls: "stun:stun4.l.google.com:19302" },
+    { urls: "stun:global.stun.twilio.com:3478" },
+    { urls: "stun:relay.metered.ca:80" }
+  ],
+  iceCandidatePoolSize: 10
 };
 
 export type RemoteStreamCallback = (stream: MediaStream) => void;
@@ -33,10 +37,23 @@ class WebRTCManager {
     this.onConnectionStateCallback = cb;
   }
 
+  public getLocalStream(): MediaStream | null {
+    return this.localStream;
+  }
+
+  public getRemoteStream(): MediaStream | null {
+    return this.remoteStream;
+  }
+
+  public getScreenStream(): MediaStream | null {
+    return this.screenStream;
+  }
+
   // Helper to create a synthetic silent audio track using Web Audio API
-  private createSilentAudioTrack(): MediaStreamTrack {
+  private createSilentAudioTrack(): MediaStreamTrack | null {
     try {
       const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtx) return null;
       const ctx = new AudioCtx();
       const oscillator = ctx.createOscillator();
       const dst = ctx.createMediaStreamDestination();
@@ -45,104 +62,121 @@ class WebRTCManager {
       oscillator.connect(gain);
       gain.connect(dst);
       oscillator.start();
-      return dst.stream.getAudioTracks()[0];
+      return dst.stream.getAudioTracks()[0] || null;
     } catch (e) {
       console.warn("Could not create Web Audio silent track:", e);
-      // Fallback empty audio track
-      const canvas = document.createElement("canvas");
-      canvas.width = 1;
-      canvas.height = 1;
-      const stream = (canvas as any).captureStream?.(1) || new MediaStream();
-      return stream.getAudioTracks()[0];
+      return null;
     }
   }
 
-  // Helper to create a synthetic canvas video track (e.g. animated avatar / placeholder)
+  // Helper to create a synthetic canvas video track
   private createCanvasVideoTrack(label = "Simulated Camera"): MediaStreamTrack {
     const canvas = document.createElement("canvas");
     canvas.width = 640;
     canvas.height = 360;
     const ctx = canvas.getContext("2d");
 
-    let hue = 160;
+    let hue = 180;
     const draw = () => {
       if (!ctx) return;
-      ctx.fillStyle = `hsl(${hue}, 40%, 15%)`;
+      ctx.fillStyle = `hsl(${hue}, 45%, 15%)`;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
-      ctx.font = "bold 24px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+      ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
+      ctx.font =
+        "bold 24px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
       ctx.textAlign = "center";
       ctx.fillText(label, canvas.width / 2, canvas.height / 2 - 15);
 
-      ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
+      ctx.fillStyle = "rgba(255, 255, 255, 0.55)";
       ctx.font = "14px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-      ctx.fillText("Audio / Video Connected", canvas.width / 2, canvas.height / 2 + 20);
+      ctx.fillText("Connected", canvas.width / 2, canvas.height / 2 + 20);
 
-      hue = (hue + 0.2) % 360;
+      hue = (hue + 0.5) % 360;
     };
 
     draw();
-    setInterval(draw, 100);
+    const interval = setInterval(draw, 100);
 
     const stream = canvas.captureStream(15);
-    return stream.getVideoTracks()[0];
+    const track = stream.getVideoTracks()[0];
+    track.addEventListener("ended", () => clearInterval(interval));
+    return track;
   }
 
   // Capture user's webcam and mic stream with multi-level resilient fallback
   public async getLocalMedia(video = true, audio = true): Promise<MediaStream> {
-    if (this.localStream && this.localStream.active) {
+    if (
+      this.localStream &&
+      this.localStream.active &&
+      this.localStream.getTracks().length > 0
+    ) {
       return this.localStream;
     }
 
-    const hasMediaDevices = typeof navigator !== "undefined" && !!navigator.mediaDevices?.getUserMedia;
+    const hasMediaDevices =
+      typeof navigator !== "undefined" && !!navigator.mediaDevices?.getUserMedia;
 
     if (hasMediaDevices) {
-      // 1. Try both Video and Audio
+      // 1. Try requested Video and Audio
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: video ? { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" } : false,
-          audio: audio ? { echoCancellation: true, noiseSuppression: true, autoGainControl: true } : false
+          video: video
+            ? { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" }
+            : false,
+          audio: audio
+            ? { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+            : false
         });
         this.localStream = stream;
         return stream;
       } catch (err1: any) {
-        console.warn("Primary getUserMedia failed:", err1.message || err1);
+        console.warn("[WebRTC] Primary getUserMedia failed:", err1.message || err1);
 
-        // 2. Try Video-only if audio device is unavailable or denied
+        // 2. Try Video-only if audio device failed
         if (video) {
           try {
-            const videoOnly = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-            // Attach a synthetic silent audio track so audio negotiation succeeds
+            const videoOnly = await navigator.mediaDevices.getUserMedia({
+              video: true,
+              audio: false
+            });
             const silentTrack = this.createSilentAudioTrack();
             if (silentTrack) videoOnly.addTrack(silentTrack);
             this.localStream = videoOnly;
             return videoOnly;
           } catch (err2: any) {
-            console.warn("Video-only getUserMedia failed:", err2.message || err2);
+            console.warn(
+              "[WebRTC] Video-only getUserMedia failed:",
+              err2.message || err2
+            );
           }
         }
 
-        // 3. Try Audio-only if video device is unavailable
+        // 3. Try Audio-only if video device failed
         if (audio) {
           try {
-            const audioOnly = await navigator.mediaDevices.getUserMedia({ video: false, audio: true });
-            // Attach a canvas video track so video window renders
-            const canvasTrack = this.createCanvasVideoTrack("FaceTime Audio User");
+            const audioOnly = await navigator.mediaDevices.getUserMedia({
+              video: false,
+              audio: true
+            });
+            const canvasTrack = this.createCanvasVideoTrack("FaceTime Audio");
             if (canvasTrack) audioOnly.addTrack(canvasTrack);
             this.localStream = audioOnly;
             return audioOnly;
           } catch (err3: any) {
-            console.warn("Audio-only getUserMedia failed:", err3.message || err3);
+            console.warn(
+              "[WebRTC] Audio-only getUserMedia failed:",
+              err3.message || err3
+            );
           }
         }
       }
     }
 
-    // 4. Fallback when hardware is completely inaccessible (e.g. desktop without mic/cam, or non-secure origin)
-    console.info("Using simulated media stream for desktop compatibility");
+    // 4. Fallback synthetic stream (e.g. simulated camera for testing or permission restricted environments)
+    console.info("[WebRTC] Using synthetic media stream");
     const syntheticStream = new MediaStream();
-    const canvasTrack = this.createCanvasVideoTrack("FaceTime Simulation");
+    const canvasTrack = this.createCanvasVideoTrack("FaceTime Camera");
     const silentTrack = this.createSilentAudioTrack();
     if (canvasTrack) syntheticStream.addTrack(canvasTrack);
     if (silentTrack) syntheticStream.addTrack(silentTrack);
@@ -153,10 +187,17 @@ class WebRTCManager {
 
   // Initialize RTCPeerConnection
   public initializePeerConnection(targetUserId: string): RTCPeerConnection {
-    this.cleanup();
+    if (this.peerConnection) {
+      try {
+        this.peerConnection.close();
+      } catch (e) {}
+      this.peerConnection = null;
+    }
+
     this.targetUserId = targetUserId;
     this.remoteDescriptionSet = false;
     this.pendingCandidates = [];
+    this.remoteStream = new MediaStream();
 
     const pc = new RTCPeerConnection(RTC_CONFIG);
     this.peerConnection = pc;
@@ -178,17 +219,30 @@ class WebRTCManager {
 
     // Handle incoming remote media tracks
     pc.ontrack = (event) => {
-      console.log("[WebRTC] Received remote track:", event.track.kind);
+      console.log("[WebRTC] Received remote track:", event.track.kind, event.track.id);
+
       if (!this.remoteStream) {
         this.remoteStream = new MediaStream();
       }
-      // Add track to remote stream if not already present
-      if (!this.remoteStream.getTracks().some((t) => t.id === event.track.id)) {
+
+      // If track with same kind exists, remove old track first
+      const existing = this.remoteStream.getTracks().find((t) => t.id === event.track.id);
+      if (!existing) {
         this.remoteStream.addTrack(event.track);
       }
+
+      // Re-emit remote stream copy to trigger React reactivity
       if (this.onRemoteStreamCallback) {
-        this.onRemoteStreamCallback(this.remoteStream);
+        this.onRemoteStreamCallback(new MediaStream(this.remoteStream.getTracks()));
       }
+
+      // Listen for unmute/mute events
+      event.track.onunmute = () => {
+        console.log("[WebRTC] Remote track unmuted:", event.track.kind);
+        if (this.onRemoteStreamCallback && this.remoteStream) {
+          this.onRemoteStreamCallback(new MediaStream(this.remoteStream.getTracks()));
+        }
+      };
     };
 
     // Add local tracks to peer connection
@@ -202,7 +256,14 @@ class WebRTCManager {
   }
 
   // Caller creates and sends an SDP Offer
-  public async createAndSendOffer(targetUserId: string): Promise<RTCSessionDescriptionInit> {
+  public async createAndSendOffer(
+    targetUserId: string
+  ): Promise<RTCSessionDescriptionInit> {
+    // Ensure local stream is ready
+    if (!this.localStream || this.localStream.getTracks().length === 0) {
+      await this.getLocalMedia(true, true);
+    }
+
     const pc = this.initializePeerConnection(targetUserId);
 
     const offer = await pc.createOffer({
@@ -220,6 +281,11 @@ class WebRTCManager {
     fromUserId: string,
     offer: RTCSessionDescriptionInit
   ): Promise<RTCSessionDescriptionInit> {
+    // Ensure local media is ready before initializing peer connection
+    if (!this.localStream || this.localStream.getTracks().length === 0) {
+      await this.getLocalMedia(true, true);
+    }
+
     const pc = this.initializePeerConnection(fromUserId);
 
     await pc.setRemoteDescription(new RTCSessionDescription(offer));
@@ -276,17 +342,26 @@ class WebRTCManager {
     if (!this.peerConnection) throw new Error("No active peer connection");
 
     const screenStream = await navigator.mediaDevices.getDisplayMedia({
-      video: true,
-      audio: true
+      video: {
+        cursor: "always",
+        displaySurface: "monitor"
+      } as any,
+      audio: false
     });
     this.screenStream = screenStream;
 
     const screenTrack = screenStream.getVideoTracks()[0];
     const senders = this.peerConnection.getSenders();
-    const videoSender = senders.find((s) => s.track && s.track.kind === "video");
+    let videoSender = senders.find((s) => s.track && s.track.kind === "video");
+
+    if (!videoSender) {
+      videoSender = senders.find((s) => (s as any).kind === "video" || s.track === null);
+    }
 
     if (videoSender) {
       await videoSender.replaceTrack(screenTrack);
+    } else {
+      this.peerConnection.addTrack(screenTrack, screenStream);
     }
 
     // Handle user stopping screen share from browser banner
@@ -309,7 +384,12 @@ class WebRTCManager {
     if (this.peerConnection && this.localStream) {
       const originalVideoTrack = this.localStream.getVideoTracks()[0] || null;
       const senders = this.peerConnection.getSenders();
-      const videoSender = senders.find((s) => s.track && s.track.kind === "video");
+      let videoSender = senders.find((s) => s.track && s.track.kind === "video");
+      if (!videoSender) {
+        videoSender = senders.find(
+          (s) => (s as any).kind === "video" || s.track === null
+        );
+      }
       if (videoSender && originalVideoTrack) {
         await videoSender.replaceTrack(originalVideoTrack);
       }
@@ -324,7 +404,9 @@ class WebRTCManager {
       this.peerConnection.onicecandidate = null;
       this.peerConnection.ontrack = null;
       this.peerConnection.onconnectionstatechange = null;
-      this.peerConnection.close();
+      try {
+        this.peerConnection.close();
+      } catch (e) {}
       this.peerConnection = null;
     }
 

@@ -28,6 +28,18 @@ const websites: WebsitesData = {
         title: "Email",
         img: "img/sites/gmail.svg",
         link: "mailto:ameeshmohd11@gmail.com"
+      },
+      {
+        id: "my-instagram",
+        title: "@4m335h",
+        img: "img/sites/instagram.svg",
+        link: "https://www.instagram.com/4m335h/"
+      },
+      {
+        id: "my-visuals",
+        title: "@visualsbyameesh",
+        img: "img/sites/instagram.svg",
+        link: "https://www.instagram.com/visualsbyameesh/"
       }
     ]
   },
@@ -77,12 +89,6 @@ const websites: WebsitesData = {
         link: "https://www.bilibili.com/"
       },
       {
-        id: "zhihu",
-        title: "知乎",
-        img: "img/sites/zhihu.jpeg",
-        link: "https://www.zhihu.com/"
-      },
-      {
         id: "leetcode",
         title: "LeetCode",
         img: "img/sites/leetcode.svg",
@@ -101,19 +107,6 @@ const websites: WebsitesData = {
         link: "https://news.ycombinator.com/"
       },
       {
-        id: "v2ex",
-        title: "V2EX",
-        img: "https://www.v2ex.com/apple-touch-icon.png",
-        link: "https://www.v2ex.com/"
-      },
-      {
-        id: "aideadline",
-        title: "AI Deadlines",
-        img: "https://aideadlin.es/static/img/favicon.png",
-        link: "https://aideadlin.es/",
-        inner: true
-      },
-      {
         id: "oh-my-cv",
         title: "OhMyCV",
         img: "https://ohmycv.app/apple-touch-icon.png",
@@ -126,21 +119,10 @@ const websites: WebsitesData = {
         link: "https://store.steampowered.com/"
       },
       {
-        id: "nazo",
-        title: "Nazo",
-        link: "https://nazo.one-story.cn"
-      },
-      {
         id: "svgomg",
         title: "SVGOMG",
         img: "https://jakearchibald.github.io/svgomg/imgs/icon.png",
         link: "https://jakearchibald.github.io/svgomg/"
-      },
-      {
-        id: "tiny-png",
-        title: "Tiny PNG",
-        img: "https://tinypng.com/images/panda-chewing-2x.png",
-        link: "https://tinypng.com/"
       }
     ]
   }

@@ -3,10 +3,10 @@ import type { AppsData } from "~/types";
 
 const apps: AppsData[] = [
   {
-    id: "launchpad",
-    title: "Launchpad",
+    id: "finder",
+    title: "Finder",
     desktop: false,
-    img: "img/icons/launchpad.png"
+    img: "img/icons/finder.png"
   },
   {
     id: "bear",

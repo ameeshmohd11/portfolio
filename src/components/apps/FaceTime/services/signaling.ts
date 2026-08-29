@@ -6,9 +6,18 @@ export type IncomingCallCallback = (data: { fromUser: User; callType: CallType }
 export type CallAcceptedCallback = (data: { fromUser: User }) => void;
 export type CallRejectedCallback = (data: { reason: string }) => void;
 export type CallEndedCallback = (data: { fromUserId?: string }) => void;
-export type WebRtcOfferCallback = (data: { fromUserId: string; offer: RTCSessionDescriptionInit }) => void;
-export type WebRtcAnswerCallback = (data: { fromUserId: string; answer: RTCSessionDescriptionInit }) => void;
-export type IceCandidateCallback = (data: { fromUserId: string; candidate: RTCIceCandidateInit }) => void;
+export type WebRtcOfferCallback = (data: {
+  fromUserId: string;
+  offer: RTCSessionDescriptionInit;
+}) => void;
+export type WebRtcAnswerCallback = (data: {
+  fromUserId: string;
+  answer: RTCSessionDescriptionInit;
+}) => void;
+export type IceCandidateCallback = (data: {
+  fromUserId: string;
+  candidate: RTCIceCandidateInit;
+}) => void;
 export type CallFailedCallback = (data: { reason: string; message: string }) => void;
 
 class SignalingService {
@@ -36,7 +45,8 @@ class SignalingService {
     }
 
     const host = typeof window !== "undefined" ? window.location.hostname : "localhost";
-    const serverUrl = url || (import.meta as any).env?.VITE_SIGNALING_URL || `http://${host}:3001`;
+    const serverUrl =
+      url || (import.meta as any).env?.VITE_SIGNALING_URL || `http://${host}:3001`;
 
     this.socket = io(serverUrl, {
       transports: ["websocket", "polling"],
@@ -46,7 +56,9 @@ class SignalingService {
     });
 
     this.socket.on("connect", () => {
-      console.log(`[Signaling Client] Connected to ${serverUrl} with socket ID: ${this.socket?.id}`);
+      console.log(
+        `[Signaling Client] Connected to ${serverUrl} with socket ID: ${this.socket?.id}`
+      );
       this.connectionStateListeners.forEach((cb) => cb(true));
       if (this.registeredUser) {
         this.registerUser(this.registeredUser);
@@ -135,19 +147,31 @@ class SignalingService {
 
   public sendOffer(toUserId: string, offer: RTCSessionDescriptionInit) {
     if (this.socket) {
-      this.socket.emit("webrtc-offer", { toUserId, offer });
+      this.socket.emit("webrtc-offer", {
+        toUserId,
+        offer,
+        fromUserId: this.registeredUser?.id
+      });
     }
   }
 
   public sendAnswer(toUserId: string, answer: RTCSessionDescriptionInit) {
     if (this.socket) {
-      this.socket.emit("webrtc-answer", { toUserId, answer });
+      this.socket.emit("webrtc-answer", {
+        toUserId,
+        answer,
+        fromUserId: this.registeredUser?.id
+      });
     }
   }
 
   public sendIceCandidate(toUserId: string, candidate: RTCIceCandidateInit) {
     if (this.socket) {
-      this.socket.emit("ice-candidate", { toUserId, candidate });
+      this.socket.emit("ice-candidate", {
+        toUserId,
+        candidate,
+        fromUserId: this.registeredUser?.id
+      });
     }
   }
 

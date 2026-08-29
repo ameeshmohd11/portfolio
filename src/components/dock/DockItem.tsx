@@ -96,7 +96,9 @@ export default function DockItem({
   return (
     <li
       id={`dock-${id}`}
-      onClick={desktop || id === "launchpad" ? () => openApp(id) : () => {}}
+      onClick={
+        desktop || id === "launchpad" || id === "finder" ? () => openApp(id) : () => {}
+      }
       className="relative flex flex-col justify-end mb-1"
     >
       <p

@@ -11,19 +11,19 @@ export interface UserSlice {
 }
 
 export const createUserSlice: StateCreator<UserSlice> = (set) => ({
-  typoraMd: `# Hi 👋\nThis is a simple clone of [Typora](https://typora.io/). Built on top of [Milkdown](https://milkdown.dev/), an open-source WYSIWYG markdown editor.`,
+  typoraMd: `# Hi 👋\nA browser-based macOS-inspired desktop environment built with modern web technologies.`,
   setTyporaMd: (v) => set(() => ({ typoraMd: v })),
   faceTimeImages: {},
   addFaceTimeImage: (v) =>
-    set((state) => {
-      const images = state.faceTimeImages;
-      images[+new Date()] = v;
-      return { faceTimeImages: images };
-    }),
+    set((state: UserSlice) => ({
+      faceTimeImages: {
+        ...state.faceTimeImages,
+        [+new Date()]: v
+      }
+    })),
   delFaceTimeImage: (k) =>
-    set((state) => {
-      const images = state.faceTimeImages;
-      delete images[k];
-      return { faceTimeImages: images };
+    set((state: UserSlice) => {
+      const { [k]: _, ...remainingImages } = state.faceTimeImages;
+      return { faceTimeImages: remainingImages };
     })
 });
