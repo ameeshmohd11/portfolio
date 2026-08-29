@@ -64,7 +64,7 @@ export default defineConfig({
     presetUno(),
     presetAttributify(),
     presetIcons({
-      warn: true,
+      warn: false,
       extraProperties: {
         display: "inline-block"
       }

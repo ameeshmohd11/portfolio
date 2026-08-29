@@ -101,7 +101,7 @@ export default function Spotlight({
   const launchSelectedApp = () => {
     if (curDetails.type === "app" && !curDetails.link) {
       const id = curDetails.id;
-      if (id === "launchpad") toggleLaunchpad(true);
+      if (id === "launchpad" || id === "finder") toggleLaunchpad(true);
       else openApp(id);
       toggleSpotlight();
     } else {
