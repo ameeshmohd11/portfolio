@@ -43,7 +43,10 @@ export function useFaceTime() {
   } = useFaceTimeStore();
 
   const timerRef = useRef<number | null>(null);
-  const pendingOfferRef = useRef<{ fromUserId: string; offer: RTCSessionDescriptionInit } | null>(null);
+  const pendingOfferRef = useRef<{
+    fromUserId: string;
+    offer: RTCSessionDescriptionInit;
+  } | null>(null);
 
   // Initialize and maintain signaling connection
   useEffect(() => {
@@ -95,6 +98,11 @@ export function useFaceTime() {
         });
       }
       webrtcManager.cleanup();
+      if (localStream) {
+        localStream.getTracks().forEach((track) => track.stop());
+      }
+      setLocalStream(null);
+      setRemoteStream(null);
       soundEffects.stopSounds();
       setCallState("idle", null);
       resetCallMetrics();
@@ -116,8 +124,12 @@ export function useFaceTime() {
         });
       }
       webrtcManager.cleanup();
-      soundEffects.stopSounds();
+      if (localStream) {
+        localStream.getTracks().forEach((track) => track.stop());
+      }
+      setLocalStream(null);
       setRemoteStream(null);
+      soundEffects.stopSounds();
       setCallState("idle", null);
       resetCallMetrics();
     });
@@ -159,6 +171,12 @@ export function useFaceTime() {
       console.warn("[useFaceTime] Call failed:", message);
       soundEffects.playEndCall();
       soundEffects.stopSounds();
+      webrtcManager.cleanup();
+      if (localStream) {
+        localStream.getTracks().forEach((track) => track.stop());
+      }
+      setLocalStream(null);
+      setRemoteStream(null);
       setPermissionError(message);
       setCallState("idle", null);
       resetCallMetrics();
@@ -284,9 +302,14 @@ export function useFaceTime() {
     }
     soundEffects.stopSounds();
     webrtcManager.cleanup();
+    if (localStream) {
+      localStream.getTracks().forEach((track) => track.stop());
+    }
+    setLocalStream(null);
+    setRemoteStream(null);
     setCallState("idle", null);
     resetCallMetrics();
-  }, [remoteUser, callType]);
+  }, [remoteUser, callType, localStream]);
 
   // Hang up / Cancel active or outgoing call
   const hangUp = useCallback(() => {
@@ -307,11 +330,15 @@ export function useFaceTime() {
     soundEffects.stopSounds();
     soundEffects.playEndCall();
     webrtcManager.cleanup();
+    if (localStream) {
+      localStream.getTracks().forEach((track) => track.stop());
+    }
+    setLocalStream(null);
     setRemoteStream(null);
     setCallState("idle", null);
     resetCallMetrics();
     setScreenSharing(false);
-  }, [remoteUser, callState, callType, callDuration]);
+  }, [remoteUser, callState, callType, callDuration, localStream]);
 
   // Handle Screen Share Toggle
   const handleToggleScreenShare = useCallback(async () => {

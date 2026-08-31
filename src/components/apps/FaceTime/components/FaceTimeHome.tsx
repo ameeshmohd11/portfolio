@@ -46,9 +46,10 @@ export const FaceTimeHome: React.FC<FaceTimeHomeProps> = ({
   const [copiedLink, setCopiedLink] = useState(false);
   const [previewStream, setPreviewStream] = useState<MediaStream | null>(null);
   const previewVideoRef = useRef<HTMLVideoElement>(null);
-  const [cameraActive, setCameraActive] = useState(true);
+  // Default camera preview to OFF to respect privacy/security and save battery
+  const [cameraActive, setCameraActive] = useState(false);
 
-  // Initialize preview stream for home screen camera background
+  // Initialize preview stream only when user explicitly toggles it ON
   useEffect(() => {
     let active = true;
     let streamInstance: MediaStream | null = null;
@@ -69,7 +70,10 @@ export const FaceTimeHome: React.FC<FaceTimeHomeProps> = ({
         })
         .catch((e) => {
           console.log("Home preview camera not available or disabled:", e.message);
+          setCameraActive(false);
         });
+    } else {
+      setPreviewStream(null);
     }
 
     return () => {
@@ -103,7 +107,9 @@ export const FaceTimeHome: React.FC<FaceTimeHomeProps> = ({
                   isSignalingConnected ? "bg-emerald-400 animate-pulse" : "bg-amber-400"
                 }`}
               />
-              <span className={isSignalingConnected ? "text-emerald-400" : "text-amber-400"}>
+              <span
+                className={isSignalingConnected ? "text-emerald-400" : "text-amber-400"}
+              >
                 {isSignalingConnected ? "Signaling Live" : "Connecting..."}
               </span>
             </div>
@@ -124,7 +130,10 @@ export const FaceTimeHome: React.FC<FaceTimeHomeProps> = ({
                 </option>
               ))}
             </select>
-            <ChevronDownIcon className="absolute right-2.5 top-2 text-white/60 pointer-events-none" size={13} />
+            <ChevronDownIcon
+              className="absolute right-2.5 top-2 text-white/60 pointer-events-none"
+              size={13}
+            />
           </div>
         </div>
 
@@ -132,7 +141,10 @@ export const FaceTimeHome: React.FC<FaceTimeHomeProps> = ({
         <div className="p-3 space-y-2.5">
           {/* Search Box */}
           <div className="relative flex items-center">
-            <SearchIcon className="absolute left-2.5 text-white/40 pointer-events-none" size={13} />
+            <SearchIcon
+              className="absolute left-2.5 text-white/40 pointer-events-none"
+              size={13}
+            />
             <input
               type="text"
               placeholder="Search contacts..."
@@ -285,7 +297,8 @@ export const FaceTimeHome: React.FC<FaceTimeHomeProps> = ({
           <div className="space-y-1">
             <h2 className="text-xl font-bold tracking-tight text-white">FaceTime</h2>
             <p className="text-xs text-white/60">
-              Logged in as <span className="text-emerald-400 font-semibold">{currentUser.name}</span>
+              Logged in as{" "}
+              <span className="text-emerald-400 font-semibold">{currentUser.name}</span>
             </p>
           </div>
 
@@ -305,7 +318,10 @@ export const FaceTimeHome: React.FC<FaceTimeHomeProps> = ({
                   >
                     <div className="relative flex-shrink-0">
                       <img
-                        src={user.avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${user.id}`}
+                        src={
+                          user.avatar ||
+                          `https://api.dicebear.com/7.x/bottts/svg?seed=${user.id}`
+                        }
                         alt={user.name}
                         className="w-7 h-7 rounded-full object-cover"
                       />

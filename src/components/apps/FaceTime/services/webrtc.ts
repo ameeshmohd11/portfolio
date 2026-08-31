@@ -399,6 +399,7 @@ class WebRTCManager {
   // Cleanup active streams and peer connection
   public cleanup() {
     this.stopScreenShare().catch(() => {});
+    this.stopLocalStream();
 
     if (this.peerConnection) {
       this.peerConnection.onicecandidate = null;
