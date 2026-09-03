@@ -170,6 +170,29 @@ io.on("connection", (socket) => {
     }
   });
 
+  // FaceTime Reactions Relay (emotions / hand gestures / manual reactions)
+  socket.on(
+    "send-reaction",
+    ({ toUserId, reaction, gesture, x, y, timestamp, fromUserId }) => {
+      const targetSocketId = userToSocket.get(toUserId);
+      const sender = socketToUser.get(socket.id);
+      const senderId = fromUserId || sender?.id;
+      if (targetSocketId) {
+        console.log(
+          `[Reaction] From ${senderId} to ${toUserId}: ${reaction} (${gesture || "manual"}) at (${x}, ${y})`
+        );
+        io.to(targetSocketId).emit("receive-reaction", {
+          fromUserId: senderId,
+          reaction,
+          gesture,
+          x,
+          y,
+          timestamp: timestamp || Date.now()
+        });
+      }
+    }
+  );
+
   // Disconnect handler
   socket.on("disconnect", () => {
     const user = socketToUser.get(socket.id);

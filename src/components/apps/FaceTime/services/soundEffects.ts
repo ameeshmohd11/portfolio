@@ -65,10 +65,10 @@ class SoundEffectsService {
     const playChimeSequence = () => {
       try {
         const notes = [
-          { freq: 523.25, time: 0, dur: 0.2 },     // C5
-          { freq: 659.25, time: 0.18, dur: 0.2 },  // E5
+          { freq: 523.25, time: 0, dur: 0.2 }, // C5
+          { freq: 659.25, time: 0.18, dur: 0.2 }, // E5
           { freq: 783.99, time: 0.36, dur: 0.25 }, // G5
-          { freq: 1046.5, time: 0.54, dur: 0.4 }   // C6
+          { freq: 1046.5, time: 0.54, dur: 0.4 } // C6
         ];
 
         notes.forEach(({ freq, time, dur }) => {
@@ -105,8 +105,8 @@ class SoundEffectsService {
     try {
       const now = ctx.currentTime;
       const notes = [
-        { freq: 587.33, time: 0 },     // D5
-        { freq: 880.00, time: 0.12 }   // A5
+        { freq: 587.33, time: 0 }, // D5
+        { freq: 880.0, time: 0.12 } // A5
       ];
 
       notes.forEach(({ freq, time }) => {
@@ -139,9 +139,9 @@ class SoundEffectsService {
     try {
       const now = ctx.currentTime;
       const notes = [
-        { freq: 659.25, time: 0 },     // E5
-        { freq: 523.25, time: 0.12 },  // C5
-        { freq: 392.00, time: 0.24 }   // G4
+        { freq: 659.25, time: 0 }, // E5
+        { freq: 523.25, time: 0.12 }, // C5
+        { freq: 392.0, time: 0.24 } // G4
       ];
 
       notes.forEach(({ freq, time }) => {
@@ -174,6 +174,102 @@ class SoundEffectsService {
       clearInterval(this.dialInterval);
       this.dialInterval = null;
     }
+  }
+
+  // Play tactile sound effect for FaceTime Reactions
+  public playReactionSound(reaction: string) {
+    const ctx = this.getAudioContext();
+    if (!ctx) return;
+
+    try {
+      const now = ctx.currentTime;
+
+      if (reaction === "thumbs_up") {
+        // Bubble pop sound
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(320, now);
+        osc.frequency.exponentialRampToValueAtTime(740, now + 0.12);
+
+        gain.gain.setValueAtTime(0.12, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.2);
+      } else if (reaction === "heart") {
+        // Sweet harp sparkle chord
+        const freqs = [554.37, 659.25, 830.61, 1108.73, 1318.51];
+        freqs.forEach((freq, idx) => {
+          const t = now + idx * 0.06;
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = "triangle";
+          osc.frequency.setValueAtTime(freq, t);
+
+          gain.gain.setValueAtTime(0, t);
+          gain.gain.linearRampToValueAtTime(0.08, t + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
+
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(t);
+          osc.stop(t + 0.45);
+        });
+      } else if (reaction === "balloons") {
+        // Airy rising chime
+        const freqs = [440, 554, 659, 880];
+        freqs.forEach((freq, idx) => {
+          const t = now + idx * 0.08;
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(freq, t);
+
+          gain.gain.setValueAtTime(0, t);
+          gain.gain.linearRampToValueAtTime(0.06, t + 0.03);
+          gain.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(t);
+          osc.stop(t + 0.55);
+        });
+      } else if (reaction === "thumbs_down") {
+        // Low descending drop
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(260, now);
+        osc.frequency.exponentialRampToValueAtTime(110, now + 0.35);
+
+        gain.gain.setValueAtTime(0.12, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.45);
+      } else if (reaction === "fireworks" || reaction === "confetti") {
+        // Celebratory blast chime
+        const notes = [523.25, 659.25, 783.99, 1046.5, 1318.51];
+        notes.forEach((f, i) => {
+          const t = now + i * 0.05;
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = "triangle";
+          osc.frequency.setValueAtTime(f, t);
+          gain.gain.setValueAtTime(0.09, t);
+          gain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(t);
+          osc.stop(t + 0.4);
+        });
+      }
+    } catch (e) {}
   }
 }
 

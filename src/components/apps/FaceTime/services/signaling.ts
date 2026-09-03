@@ -19,6 +19,14 @@ export type IceCandidateCallback = (data: {
   candidate: RTCIceCandidateInit;
 }) => void;
 export type CallFailedCallback = (data: { reason: string; message: string }) => void;
+export type ReactionCallback = (data: {
+  fromUserId: string;
+  reaction: import("../types").ReactionType | import("../types").VFXEffectType;
+  gesture?: import("../types").GestureType;
+  x?: number;
+  y?: number;
+  timestamp?: number;
+}) => void;
 
 class SignalingService {
   private socket: Socket | null = null;
@@ -34,6 +42,7 @@ class SignalingService {
   private webrtcAnswerListeners = new Set<WebRtcAnswerCallback>();
   private iceCandidateListeners = new Set<IceCandidateCallback>();
   private callFailedListeners = new Set<CallFailedCallback>();
+  private reactionListeners = new Set<ReactionCallback>();
   private connectionStateListeners = new Set<(connected: boolean) => void>();
 
   public connect(url?: string): Socket {
@@ -111,6 +120,10 @@ class SignalingService {
       this.callFailedListeners.forEach((cb) => cb(data));
     });
 
+    this.socket.on("receive-reaction", (data) => {
+      this.reactionListeners.forEach((cb) => cb(data));
+    });
+
     return this.socket;
   }
 
@@ -175,6 +188,26 @@ class SignalingService {
     }
   }
 
+  public sendReaction(
+    toUserId: string,
+    reaction: import("../types").ReactionType | import("../types").VFXEffectType,
+    gesture?: import("../types").GestureType,
+    x?: number,
+    y?: number
+  ) {
+    if (this.socket) {
+      this.socket.emit("send-reaction", {
+        toUserId,
+        reaction,
+        gesture,
+        x,
+        y,
+        fromUserId: this.registeredUser?.id,
+        timestamp: Date.now()
+      });
+    }
+  }
+
   // Listener subscriptions with unsubscribe returns
   public onUsersUpdate(cb: UsersUpdateCallback) {
     this.usersUpdateListeners.add(cb);
@@ -219,6 +252,11 @@ class SignalingService {
   public onCallFailed(cb: CallFailedCallback) {
     this.callFailedListeners.add(cb);
     return () => this.callFailedListeners.delete(cb);
+  }
+
+  public onReceiveReaction(cb: ReactionCallback) {
+    this.reactionListeners.add(cb);
+    return () => this.reactionListeners.delete(cb);
   }
 
   public onConnectionState(cb: (connected: boolean) => void) {

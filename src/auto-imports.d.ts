@@ -8,34 +8,49 @@ declare global {
   const ActiveCall: typeof import('./components/apps/FaceTime/components/ActiveCall')['ActiveCall']
   const AppWindow: typeof import('./components/AppWindow')['default']
   const AppleMenu: typeof import('./components/menus/AppleMenu')['default']
+  const BalloonParticleSystem: typeof import('./components/apps/FaceTime/components/reactions/BalloonEffect')['BalloonParticleSystem']
   const Battery: typeof import('./components/menus/Battery')['default']
   const Bear: typeof import('./components/apps/Bear')['default']
   const ChevronDownIcon: typeof import('./components/apps/FaceTime/components/Icons')['ChevronDownIcon']
   const ClockIcon: typeof import('./components/apps/FaceTime/components/Icons')['ClockIcon']
+  const ConfettiParticleSystem: typeof import('./components/apps/FaceTime/components/reactions/ConfettiEffect')['ConfettiParticleSystem']
   const ContactList: typeof import('./components/apps/FaceTime/components/ContactList')['ContactList']
   const ContractIcon: typeof import('./components/apps/FaceTime/components/Icons')['ContractIcon']
   const ControlCenterMenu: typeof import('./components/menus/ControlCenterMenu')['default']
+  const DebugOverlay: typeof import('./components/apps/FaceTime/components/reactions/DebugOverlay')['DebugOverlay']
   const DesktopIcon: typeof import('./components/apps/FaceTime/components/Icons')['DesktopIcon']
+  const DislikeParticleSystem: typeof import('./components/apps/FaceTime/components/reactions/DislikeEffect')['DislikeParticleSystem']
   const Dock: typeof import('./components/dock/Dock')['default']
   const DockItem: typeof import('./components/dock/DockItem')['default']
   const ExpandIcon: typeof import('./components/apps/FaceTime/components/Icons')['ExpandIcon']
   const FaceTime: typeof import('./components/apps/FaceTime')['default']
   const FaceTimeHome: typeof import('./components/apps/FaceTime/components/FaceTimeHome')['FaceTimeHome']
+  const FireworkParticleSystem: typeof import('./components/apps/FaceTime/components/reactions/FireworkEffect')['FireworkParticleSystem']
+  const GESTURE_VFX_MAP: typeof import('./components/apps/FaceTime/types')['GESTURE_VFX_MAP']
+  const GestureSettingsPanel: typeof import('./components/apps/FaceTime/components/reactions/GestureSettingsPanel')['GestureSettingsPanel']
+  const HandIcon: typeof import('./components/apps/FaceTime/components/Icons')['HandIcon']
+  const HeartParticleSystem: typeof import('./components/apps/FaceTime/components/reactions/HeartEffect')['HeartParticleSystem']
   const IncomingCall: typeof import('./components/apps/FaceTime/components/IncomingCall')['IncomingCall']
   const Launchpad: typeof import('./components/Launchpad')['default']
+  const LikeParticleSystem: typeof import('./components/apps/FaceTime/components/reactions/LikeEffect')['LikeParticleSystem']
   const LinkIcon: typeof import('./components/apps/FaceTime/components/Icons')['LinkIcon']
   const MenuItem: typeof import('./components/menus/base')['MenuItem']
   const MenuItemGroup: typeof import('./components/menus/base')['MenuItemGroup']
   const MicIcon: typeof import('./components/apps/FaceTime/components/Icons')['MicIcon']
   const MicOffIcon: typeof import('./components/apps/FaceTime/components/Icons')['MicOffIcon']
   const NotificationBanner: typeof import('./components/apps/FaceTime/components/NotificationBanner')['NotificationBanner']
+  const OkParticleSystem: typeof import('./components/apps/FaceTime/components/reactions/OkEffect')['OkParticleSystem']
   const OutgoingCall: typeof import('./components/apps/FaceTime/components/OutgoingCall')['OutgoingCall']
   const PRESET_USERS: typeof import('./components/apps/FaceTime/store/facetimeStore')['PRESET_USERS']
   const PhoneIcon: typeof import('./components/apps/FaceTime/components/Icons')['PhoneIcon']
+  const ReactionLayer: typeof import('./components/apps/FaceTime/components/reactions/ReactionLayer')['ReactionLayer']
+  const ReactionsOverlay: typeof import('./components/apps/FaceTime/components/ReactionsOverlay')['ReactionsOverlay']
   const RecentCalls: typeof import('./components/apps/FaceTime/components/RecentCalls')['RecentCalls']
   const Safari: typeof import('./components/apps/Safari')['default']
   const SearchIcon: typeof import('./components/apps/FaceTime/components/Icons')['SearchIcon']
   const ShieldCheckIcon: typeof import('./components/apps/FaceTime/components/Icons')['ShieldCheckIcon']
+  const SparkleParticleSystem: typeof import('./components/apps/FaceTime/components/reactions/SparkleEffect')['SparkleParticleSystem']
+  const SparklesIcon: typeof import('./components/apps/FaceTime/components/Icons')['SparklesIcon']
   const Spotlight: typeof import('./components/Spotlight')['default']
   const Terminal: typeof import('./components/apps/Terminal')['default']
   const TopBar: typeof import('./components/menus/TopBar')['default']
@@ -46,8 +61,14 @@ declare global {
   const WarningIcon: typeof import('./components/apps/FaceTime/components/Icons')['WarningIcon']
   const WifiMenu: typeof import('./components/menus/WifiMenu')['default']
   const Window: typeof import('./components/Window')['default']
+  const classifyHandGesture: typeof import('./components/apps/FaceTime/services/gestureRecognizer')['classifyHandGesture']
+  const classifyReaction: typeof import('./components/apps/FaceTime/services/gestureRecognizer')['classifyReaction']
   const createRef: typeof import('react')['createRef']
   const forwardRef: typeof import('react')['forwardRef']
+  const getGestureDetails: typeof import('./components/apps/FaceTime/services/gestureRecognizer')['getGestureDetails']
+  const getReactionLabel: typeof import('./components/apps/FaceTime/services/gestureRecognizer')['getReactionLabel']
+  const getVFXEffectForGesture: typeof import('./components/apps/FaceTime/services/gestureRecognizer')['getVFXEffectForGesture']
+  const initGestureRecognizer: typeof import('./components/apps/FaceTime/services/gestureRecognizer')['initGestureRecognizer']
   const lazy: typeof import('react')['lazy']
   const memo: typeof import('react')['memo']
   const signalingService: typeof import('./components/apps/FaceTime/services/signaling')['signalingService']
@@ -63,6 +84,7 @@ declare global {
   const useEffect: typeof import('react')['useEffect']
   const useFaceTime: typeof import('./components/apps/FaceTime/hooks/useFaceTime')['useFaceTime']
   const useFaceTimeStore: typeof import('./components/apps/FaceTime/store/facetimeStore')['useFaceTimeStore']
+  const useGestureRecognition: typeof import('./components/apps/FaceTime/hooks/useGestureRecognition')['useGestureRecognition']
   const useId: typeof import('react')['useId']
   const useImperativeHandle: typeof import('react')['useImperativeHandle']
   const useInsertionEffect: typeof import('react')['useInsertionEffect']
@@ -83,4 +105,28 @@ declare global {
   // @ts-ignore
   export type { Terminal } from './components/apps/Terminal'
   import('./components/apps/Terminal')
+  // @ts-ignore
+  export type { BalloonParticleSystem } from './components/apps/FaceTime/components/reactions/BalloonEffect'
+  import('./components/apps/FaceTime/components/reactions/BalloonEffect')
+  // @ts-ignore
+  export type { ConfettiParticleSystem } from './components/apps/FaceTime/components/reactions/ConfettiEffect'
+  import('./components/apps/FaceTime/components/reactions/ConfettiEffect')
+  // @ts-ignore
+  export type { DislikeParticleSystem } from './components/apps/FaceTime/components/reactions/DislikeEffect'
+  import('./components/apps/FaceTime/components/reactions/DislikeEffect')
+  // @ts-ignore
+  export type { FireworkParticleSystem } from './components/apps/FaceTime/components/reactions/FireworkEffect'
+  import('./components/apps/FaceTime/components/reactions/FireworkEffect')
+  // @ts-ignore
+  export type { HeartParticleSystem } from './components/apps/FaceTime/components/reactions/HeartEffect'
+  import('./components/apps/FaceTime/components/reactions/HeartEffect')
+  // @ts-ignore
+  export type { LikeParticleSystem } from './components/apps/FaceTime/components/reactions/LikeEffect'
+  import('./components/apps/FaceTime/components/reactions/LikeEffect')
+  // @ts-ignore
+  export type { OkParticleSystem } from './components/apps/FaceTime/components/reactions/OkEffect'
+  import('./components/apps/FaceTime/components/reactions/OkEffect')
+  // @ts-ignore
+  export type { SparkleParticleSystem } from './components/apps/FaceTime/components/reactions/SparkleEffect'
+  import('./components/apps/FaceTime/components/reactions/SparkleEffect')
 }
