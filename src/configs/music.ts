@@ -1,9 +1,9 @@
 import type { MusicData } from "~/types";
 
 const music: MusicData = {
-  title: "Sunflower",
-  artist: "Post Malone / Swae Lee",
-  cover: "//p1.music.126.net/z0IO1vEsowL9mD_5yzUjeA==/109951163936068098.jpg",
+  title: "Bohemian Rhapsody",
+  artist: "Queen",
+  cover: "https://i.ytimg.com/vi/fJ9rUzIMcZQ/hqdefault.jpg",
   audio: "music/sunflower.mp3"
 };
 

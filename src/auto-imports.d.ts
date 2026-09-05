@@ -38,6 +38,7 @@ declare global {
   const MenuItemGroup: typeof import('./components/menus/base')['MenuItemGroup']
   const MicIcon: typeof import('./components/apps/FaceTime/components/Icons')['MicIcon']
   const MicOffIcon: typeof import('./components/apps/FaceTime/components/Icons')['MicOffIcon']
+  const MusicWidget: typeof import('./components/widgets/MusicWidget')['default']
   const NotificationBanner: typeof import('./components/apps/FaceTime/components/NotificationBanner')['NotificationBanner']
   const OkParticleSystem: typeof import('./components/apps/FaceTime/components/reactions/OkEffect')['OkParticleSystem']
   const OutgoingCall: typeof import('./components/apps/FaceTime/components/OutgoingCall')['OutgoingCall']

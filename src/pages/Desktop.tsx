@@ -2,6 +2,7 @@ import React from "react";
 import { apps, wallpapers } from "~/configs";
 import { minMarginY } from "~/utils";
 import type { MacActions } from "~/types";
+import MusicWidget from "~/components/widgets/MusicWidget";
 
 interface DesktopState {
   showApps: {
@@ -255,8 +256,14 @@ export default function Desktop(props: MacActions) {
         setSpotlightBtnRef={setSpotlightBtnRef}
       />
 
+      {/* Jamendo Music Player Widget */}
+      <MusicWidget hide={state.hideDockAndTopbar || state.showLaunchpad} />
+
       {/* Desktop Apps */}
-      <div className="window-bound z-10 absolute" style={{ top: minMarginY }}>
+      <div
+        className="window-bound z-10 absolute pointer-events-none"
+        style={{ top: minMarginY }}
+      >
         {renderAppWindows()}
       </div>
 
