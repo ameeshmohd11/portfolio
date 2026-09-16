@@ -36,7 +36,7 @@ export default function Gallery() {
       <div
         className={ELFSIGHT_APP_ID}
         data-elfsight-app-lazy
-        style={{ width: "100%", height: "100%" }}
+        style={{ width: "100%", height: "80%" }}
       />
     </div>
   );

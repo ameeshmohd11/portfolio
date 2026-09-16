@@ -41,6 +41,19 @@ const apps: AppsData[] = [
     content: <Safari />
   },
   {
+    id: "gallery",
+    title: "Gallery",
+    desktop: true,
+    width: 860,
+    height: 620,
+    minWidth: 400,
+    minHeight: 300,
+    x: 40,
+    y: -10,
+    img: "img/icons/gallery.png",
+    content: <Gallery />
+  },
+  {
     id: "vscode",
     title: "VSCode",
     desktop: true,

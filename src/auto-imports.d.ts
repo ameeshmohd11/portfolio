@@ -27,6 +27,8 @@ declare global {
   const FaceTimeHome: typeof import('./components/apps/FaceTime/components/FaceTimeHome')['FaceTimeHome']
   const FireworkParticleSystem: typeof import('./components/apps/FaceTime/components/reactions/FireworkEffect')['FireworkParticleSystem']
   const GESTURE_VFX_MAP: typeof import('./components/apps/FaceTime/types')['GESTURE_VFX_MAP']
+  const Gallery: typeof import('./components/apps/Gallery')['default']
+  const GalleryWidget: typeof import('./components/widgets/GalleryWidget')['default']
   const GestureSettingsPanel: typeof import('./components/apps/FaceTime/components/reactions/GestureSettingsPanel')['GestureSettingsPanel']
   const HandIcon: typeof import('./components/apps/FaceTime/components/Icons')['HandIcon']
   const HeartParticleSystem: typeof import('./components/apps/FaceTime/components/reactions/HeartEffect')['HeartParticleSystem']
