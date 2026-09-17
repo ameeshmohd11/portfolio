@@ -1,6 +1,5 @@
 import { appBarHeight } from "~/utils";
 import type { AppsData } from "~/types";
-
 const apps: AppsData[] = [
   {
     id: "finder",
@@ -92,5 +91,4 @@ const apps: AppsData[] = [
     link: "https://github.com/ameeshmohd11"
   }
 ];
-
 export default apps;

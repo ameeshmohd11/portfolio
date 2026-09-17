@@ -4,7 +4,6 @@ import unocss from "unocss/vite";
 import autoImport from "unplugin-auto-import/vite";
 import path from "path";
 
-// https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
     unocss(),
@@ -15,9 +14,14 @@ export default defineConfig({
       dirs: ["src/hooks", "src/stores", "src/components/**"]
     })
   ],
+
   resolve: {
     alias: {
       "~/": `${path.resolve(__dirname, "src")}/`
     }
+  },
+
+  build: {
+    chunkSizeWarningLimit: 1000
   }
 });
