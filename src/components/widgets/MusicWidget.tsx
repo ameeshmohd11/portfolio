@@ -1,11 +1,10 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   YouTubeTrack,
   CURATED_TRACKS,
-  YOUTUBE_GENRES,
   searchYouTubeTracks,
-  getStoredYouTubeApiKey,
-  setStoredYouTubeApiKey
+  extractYouTubeVideoId,
+  fetchYouTubeVideoDetails
 } from "~/services/youtube";
 
 declare global {
@@ -33,24 +32,36 @@ export default function MusicWidget({ hide = false }: MusicWidgetProps) {
   const [likedTracks, setLikedTracks] = useState<Record<string, boolean>>({});
   const [showDrawer, setShowDrawer] = useState<boolean>(false);
   const [showVideo, setShowVideo] = useState<boolean>(false);
-  const [activeGenre, setActiveGenre] = useState<string>("trending");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [statusMessage, setStatusMessage] = useState<string>("");
   const [isMinimized, setIsMinimized] = useState<boolean>(false);
   const [dragPos, setDragPos] = useState<{ x: number; y: number }>({ x: -1, y: 40 });
   const [isDraggingState, setIsDraggingState] = useState<boolean>(false);
+  const [isPlayerReadyState, setIsPlayerReadyState] = useState<boolean>(false);
 
   const playerRef = useRef<any>(null);
   const isPlayerReady = useRef<boolean>(false);
+  const pendingPlayRef = useRef<boolean>(false);
   const progressContainerRef = useRef<HTMLDivElement>(null);
   const isSeeking = useRef<boolean>(false);
   const timerRef = useRef<any>(null);
+  const statusTimerRef = useRef<any>(null);
   const isDragging = useRef<boolean>(false);
   const hasDragged = useRef<boolean>(false);
   const dragOffset = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const widgetRef = useRef<HTMLDivElement>(null);
 
-  const currentTrack: YouTubeTrack | undefined = tracks[currentIndex];
+  const currentTrack: YouTubeTrack | undefined = tracks[currentIndex] || tracks[0];
+
+  // Show status banner notification with auto-dismiss
+  const showStatus = (msg: string, durationMs = 3500) => {
+    setStatusMessage(msg);
+    if (statusTimerRef.current) clearTimeout(statusTimerRef.current);
+    statusTimerRef.current = setTimeout(() => {
+      setStatusMessage("");
+    }, durationMs);
+  };
 
   // Load liked tracks from localStorage
   useEffect(() => {
@@ -73,70 +84,114 @@ export default function MusicWidget({ hide = false }: MusicWidgetProps) {
     }
   };
 
-  // Load YouTube IFrame API Script
+  // Robust YouTube IFrame API Initialization
   useEffect(() => {
-    if (!window.YT) {
-      const tag = document.createElement("script");
-      tag.src = "https://www.youtube.com/iframe_api";
-      const firstScriptTag = document.getElementsByTagName("script")[0];
-      firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag);
-    }
+    let checkInterval: any = null;
 
-    const initPlayer = () => {
-      if (!window.YT || !window.YT.Player) return;
-      if (playerRef.current) return;
+    const setupPlayer = () => {
+      if (!window.YT || !window.YT.Player) return false;
+      if (playerRef.current) return true;
 
-      playerRef.current = new window.YT.Player("youtube-widget-audio-player", {
-        height: "100%",
-        width: "100%",
-        videoId: currentTrack?.id || CURATED_TRACKS[0].id,
-        playerVars: {
-          autoplay: 0,
-          controls: 0,
-          disablekb: 1,
-          fs: 0,
-          modestbranding: 1,
-          rel: 0,
-          showinfo: 0,
-          iv_load_policy: 3,
-          origin: window.location.origin
-        },
-        events: {
-          onReady: (event: any) => {
-            isPlayerReady.current = true;
-            event.target.setVolume(volume);
-            if (isMuted) event.target.mute();
+      const playerContainer = document.getElementById("youtube-widget-audio-player");
+      if (!playerContainer) return false;
+
+      try {
+        const initialVideoId = currentTrack?.id || CURATED_TRACKS[0].id;
+        playerRef.current = new window.YT.Player("youtube-widget-audio-player", {
+          height: "100%",
+          width: "100%",
+          videoId: initialVideoId,
+          playerVars: {
+            autoplay: 0,
+            controls: 0,
+            disablekb: 1,
+            fs: 0,
+            modestbranding: 1,
+            rel: 0,
+            showinfo: 0,
+            iv_load_policy: 3,
+            enablejsapi: 1
           },
-          onStateChange: (event: any) => {
-            // YT.PlayerState: -1 (unstarted), 0 (ended), 1 (playing), 2 (paused), 3 (buffering), 5 (video cued)
-            if (event.data === 1) {
-              setIsPlaying(true);
+          events: {
+            onReady: (event: any) => {
+              isPlayerReady.current = true;
+              setIsPlayerReadyState(true);
+              try {
+                event.target.setVolume(volume);
+                if (isMuted) event.target.mute();
+              } catch {}
+              if (pendingPlayRef.current) {
+                pendingPlayRef.current = false;
+                try {
+                  event.target.playVideo();
+                  setIsPlaying(true);
+                } catch (e) {
+                  console.warn("Auto play after ready error:", e);
+                }
+              }
+            },
+            onStateChange: (event: any) => {
+              // YT.PlayerState: -1 (unstarted), 0 (ended), 1 (playing), 2 (paused), 3 (buffering), 5 (video cued)
+              if (event.data === 1) {
+                setIsPlaying(true);
+                setIsBuffering(false);
+              } else if (event.data === 2) {
+                setIsPlaying(false);
+                setIsBuffering(false);
+              } else if (event.data === 3) {
+                setIsBuffering(true);
+              } else if (event.data === 0) {
+                handleNextTrack(true);
+              }
+            },
+            onError: (event: any) => {
+              console.warn("YouTube player error event code:", event.data);
               setIsBuffering(false);
-            } else if (event.data === 2) {
               setIsPlaying(false);
-              setIsBuffering(false);
-            } else if (event.data === 3) {
-              setIsBuffering(true);
-            } else if (event.data === 0) {
-              handleNextTrack(true);
+              showStatus("Track restricted for embedding. Skipping...");
+              setTimeout(() => {
+                handleNextTrack();
+              }, 1200);
             }
-          },
-          onError: () => {
-            setIsBuffering(false);
-            setIsPlaying(false);
           }
-        }
-      });
+        });
+        return true;
+      } catch (err) {
+        console.error("Failed to initialize YT.Player:", err);
+        return false;
+      }
     };
 
     if (window.YT && window.YT.Player) {
-      initPlayer();
+      setupPlayer();
     } else {
-      window.onYouTubeIframeAPIReady = initPlayer;
+      if (!document.getElementById("yt-iframe-api-script")) {
+        const tag = document.createElement("script");
+        tag.id = "yt-iframe-api-script";
+        tag.src = "https://www.youtube.com/iframe_api";
+        const firstScriptTag = document.getElementsByTagName("script")[0];
+        firstScriptTag?.parentNode?.insertBefore(tag, firstScriptTag);
+      }
+
+      const prevCallback = window.onYouTubeIframeAPIReady;
+      window.onYouTubeIframeAPIReady = () => {
+        if (typeof prevCallback === "function") prevCallback();
+        setupPlayer();
+      };
+
+      // Periodic check in case onYouTubeIframeAPIReady already fired
+      checkInterval = setInterval(() => {
+        if (window.YT && window.YT.Player && !playerRef.current) {
+          if (setupPlayer()) {
+            clearInterval(checkInterval);
+          }
+        }
+      }, 300);
     }
 
     return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
+      if (checkInterval) clearInterval(checkInterval);
+      if (statusTimerRef.current) clearTimeout(statusTimerRef.current);
     };
   }, []);
 
@@ -160,7 +215,7 @@ export default function MusicWidget({ hide = false }: MusicWidgetProps) {
     };
   }, []);
 
-  // Load new track when index changes
+  // Load new track when index changes or track id changes
   useEffect(() => {
     if (!currentTrack || !playerRef.current || !isPlayerReady.current) return;
     try {
@@ -174,7 +229,7 @@ export default function MusicWidget({ hide = false }: MusicWidgetProps) {
     } catch (e) {
       console.warn("YouTube player loadVideoById error:", e);
     }
-  }, [currentIndex, currentTrack?.id]);
+  }, [currentIndex, currentTrack?.id, isPlayerReadyState]);
 
   // Volume & Mute handling
   useEffect(() => {
@@ -192,7 +247,17 @@ export default function MusicWidget({ hide = false }: MusicWidgetProps) {
   }, [volume, isMuted]);
 
   const togglePlay = () => {
-    if (!playerRef.current || !isPlayerReady.current || !currentTrack) return;
+    if (!currentTrack) return;
+
+    if (!playerRef.current || !isPlayerReady.current) {
+      // Player is still bootstrapping, queue the play command
+      pendingPlayRef.current = true;
+      setIsPlaying(true);
+      setIsBuffering(true);
+      showStatus("Connecting to YouTube...");
+      return;
+    }
+
     try {
       if (isPlaying) {
         playerRef.current.pauseVideo();
@@ -206,6 +271,20 @@ export default function MusicWidget({ hide = false }: MusicWidgetProps) {
     }
   };
 
+  const playSpecificTrack = (idx: number) => {
+    setCurrentIndex(idx);
+    setIsPlaying(true);
+    if (playerRef.current && isPlayerReady.current) {
+      try {
+        playerRef.current.loadVideoById(tracks[idx].id);
+      } catch (e) {
+        console.warn("playSpecificTrack error:", e);
+      }
+    } else {
+      pendingPlayRef.current = true;
+    }
+  };
+
   const handleNextTrack = (autoEnded = false) => {
     if (tracks.length === 0) return;
     if (autoEnded && repeatMode === "one") {
@@ -215,14 +294,22 @@ export default function MusicWidget({ hide = false }: MusicWidgetProps) {
       }
       return;
     }
-    if (isShuffle) {
-      const nextIdx = Math.floor(Math.random() * tracks.length);
-      setCurrentIndex(nextIdx);
-    } else {
-      const nextIdx = (currentIndex + 1) % tracks.length;
-      setCurrentIndex(nextIdx);
+
+    let nextIdx = (currentIndex + 1) % tracks.length;
+    if (isShuffle && tracks.length > 1) {
+      nextIdx = Math.floor(Math.random() * tracks.length);
+      if (nextIdx === currentIndex) {
+        nextIdx = (currentIndex + 1) % tracks.length;
+      }
     }
+
+    setCurrentIndex(nextIdx);
     setIsPlaying(true);
+    if (playerRef.current && isPlayerReady.current) {
+      try {
+        playerRef.current.loadVideoById(tracks[nextIdx].id);
+      } catch {}
+    }
   };
 
   const handlePrevTrack = () => {
@@ -234,6 +321,11 @@ export default function MusicWidget({ hide = false }: MusicWidgetProps) {
     const prevIdx = (currentIndex - 1 + tracks.length) % tracks.length;
     setCurrentIndex(prevIdx);
     setIsPlaying(true);
+    if (playerRef.current && isPlayerReady.current) {
+      try {
+        playerRef.current.loadVideoById(tracks[prevIdx].id);
+      } catch {}
+    }
   };
 
   const cycleRepeat = () => {
@@ -243,26 +335,50 @@ export default function MusicWidget({ hide = false }: MusicWidgetProps) {
   };
 
   // Search & Genre handling
-  const executeSearch = async (query: string) => {
+  const executeSearch = async (query: string, genreId?: string) => {
+    const trimmed = query.trim();
     setIsLoading(true);
-    const results = await searchYouTubeTracks(query);
+
+    // Check if input is a YouTube URL or direct Video ID
+    const directId = extractYouTubeVideoId(trimmed);
+    if (directId) {
+      showStatus("Resolving YouTube link...");
+      const track = await fetchYouTubeVideoDetails(directId);
+      if (track) {
+        const updated = [track, ...tracks.filter((t) => t.id !== track.id)];
+        setTracks(updated);
+        setCurrentIndex(0);
+        setCurrentTime(0);
+        setIsPlaying(true);
+        if (playerRef.current && isPlayerReady.current) {
+          playerRef.current.loadVideoById(track.id);
+        } else {
+          pendingPlayRef.current = true;
+        }
+        showStatus(`Playing: ${track.title}`);
+        setIsLoading(false);
+        return;
+      }
+    }
+
+    // Standard search
+    const results = await searchYouTubeTracks(trimmed);
     if (results.length > 0) {
       setTracks(results);
       setCurrentIndex(0);
       setCurrentTime(0);
+    } else {
+      showStatus("No tracks found");
     }
     setIsLoading(false);
   };
 
-  const handleGenreClick = async (genre: (typeof YOUTUBE_GENRES)[0]) => {
-    setActiveGenre(genre.id);
-    setSearchQuery("");
-    executeSearch(genre.query);
-  };
-
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!searchQuery.trim()) return;
+    if (!searchQuery.trim()) {
+      setTracks(CURATED_TRACKS);
+      return;
+    }
     executeSearch(searchQuery);
   };
 
@@ -310,7 +426,7 @@ export default function MusicWidget({ hide = false }: MusicWidgetProps) {
   const progressPercent =
     duration > 0 ? Math.min(100, (currentTime / duration) * 100) : 0;
 
-  // Compute initial position: right-aligned by default (x=-1 is sentinel)
+  // Compute position: right-aligned by default (x=-1 is sentinel)
   const getPositionStyle = (widthEstimate: number): React.CSSProperties => {
     const x = dragPos.x === -1 ? window.innerWidth - widthEstimate - 16 : dragPos.x;
     return {
@@ -322,8 +438,7 @@ export default function MusicWidget({ hide = false }: MusicWidgetProps) {
   };
 
   const handleDragStart = (e: React.MouseEvent) => {
-    // Don't drag from buttons/inputs
-    if ((e.target as HTMLElement).closest("button, input, a")) return;
+    if ((e.target as HTMLElement).closest("button, input, a, form")) return;
     e.preventDefault();
     isDragging.current = true;
     hasDragged.current = false;
@@ -360,15 +475,38 @@ export default function MusicWidget({ hide = false }: MusicWidgetProps) {
     document.addEventListener("mouseup", handleMouseUp);
   };
 
-  if (hide) return null;
+  const isHidden = isMinimized || hide;
+  const cardClassName = [
+    "z-40 pointer-events-auto w-[345px] max-w-[calc(100vw-1.5rem)] rounded-3xl bg-[#1c1c1e]/90 backdrop-blur-3xl border border-white/20 shadow-2xl text-white select-none font-sans",
+    isDraggingState ? "" : "transition-all duration-300",
+    isHidden ? "!opacity-0 !pointer-events-none !scale-95" : "opacity-100 scale-100"
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   return (
     <>
-      {/* Minimized Pill */}
-      {isMinimized && (
+      {/* 
+        CRITICAL FOR PLAYBACK:
+        Always keep the YouTube IFrame container mounted with a valid size (at least 320x180).
+        When showVideo is false, place it offscreen so YouTube player never throws 0x0 viewport errors.
+      */}
+      <div
+        className={`overflow-hidden transition-all duration-300 ${
+          showVideo
+            ? "h-[195px] w-full bg-black relative rounded-t-3xl block"
+            : "fixed -left-[9999px] -top-[9999px] w-[320px] h-[180px] pointer-events-none opacity-[0.01]"
+        }`}
+        style={showVideo ? {} : { zIndex: -1000 }}
+      >
+        <div id="youtube-widget-audio-player" className="w-full h-full" />
+      </div>
+
+      {/* Minimized Pill View */}
+      {isMinimized && !hide && (
         <div
           data-draggable
-          className="z-0 pointer-events-auto flex items-center space-x-2.5 px-3 py-1.5 rounded-full bg-[#181818]/85 backdrop-blur-2xl border border-white/15 text-white shadow-xl cursor-grab hover:bg-[#202020]/90 transition active:cursor-grabbing"
+          className="z-40 pointer-events-auto flex items-center space-x-2.5 px-3 py-1.5 rounded-full bg-[#181818]/90 backdrop-blur-2xl border border-white/20 text-white shadow-xl cursor-grab hover:bg-[#202020]/95 transition active:cursor-grabbing"
           style={getPositionStyle(220)}
           onMouseDown={handleDragStart}
           onClick={() => {
@@ -384,7 +522,7 @@ export default function MusicWidget({ hide = false }: MusicWidgetProps) {
             <img
               src={
                 currentTrack?.thumbnail ||
-                "https://i.ytimg.com/vi/3Q8iuY9005E/hqdefault.jpg"
+                "https://i.ytimg.com/vi/ApXoWvfEYVU/hqdefault.jpg"
               }
               alt="cover"
               className="w-full h-full object-cover"
@@ -414,45 +552,34 @@ export default function MusicWidget({ hide = false }: MusicWidgetProps) {
         </div>
       )}
 
+      {/* Full Music Player Card */}
       <div
         ref={widgetRef}
         data-draggable
-        className={`z-0 pointer-events-auto w-[345px] max-w-[calc(100vw-1.5rem)] rounded-3xl bg-[#1c1c1e]/90 backdrop-blur-3xl border border-white/15 shadow-2xl text-white select-none font-sans ${isDraggingState ? "" : "transition-all duration-300"} ${isMinimized ? "!w-0 !h-0 !overflow-hidden !opacity-0 !pointer-events-none" : ""}`}
-        style={{
-          ...getPositionStyle(345),
-          ...(isMinimized
-            ? {
-                position: "absolute" as const,
-                opacity: 0,
-                pointerEvents: "none" as const
-              }
-            : {})
-        }}
+        className={cardClassName}
+        style={getPositionStyle(345)}
       >
-        {/* Hidden YouTube IFrame Container (or live preview when showVideo is true) */}
-        <div
-          className={`transition-all duration-300 overflow-hidden rounded-t-3xl ${
-            showVideo
-              ? "h-[195px] w-full bg-black relative"
-              : "w-0 h-0 opacity-0 pointer-events-none absolute"
-          }`}
-        >
-          <div id="youtube-widget-audio-player" className="w-full h-full" />
-        </div>
+        {/* Status / Error Toast Banner */}
+        {statusMessage && (
+          <div className="px-3 py-1 bg-gradient-to-r from-emerald-600/90 to-teal-700/90 text-white text-[11px] font-medium text-center rounded-t-3xl flex items-center justify-center space-x-1.5 animate-fadeIn">
+            <span className="i-bi:info-circle-fill text-xs" />
+            <span className="truncate">{statusMessage}</span>
+          </div>
+        )}
 
         {/* Main Glassmorphism Player Card */}
         <div className="p-3.5 flex flex-col space-y-3">
-          {/* Top Row: Track Thumbnail, Title, Artist & Header Actions — also the drag handle */}
+          {/* Top Row: Track Thumbnail, Title, Artist & Actions (also Drag Handle) */}
           <div
             className="flex items-center space-x-3 cursor-grab active:cursor-grabbing"
             onMouseDown={handleDragStart}
           >
             {/* Thumbnail Artwork */}
-            <div className="relative group w-14 h-14 flex-shrink-0 rounded-2xl overflow-hidden bg-black/40 shadow-lg border border-white/10">
+            <div className="relative group w-14 h-14 flex-shrink-0 rounded-2xl overflow-hidden bg-black/40 shadow-lg border border-white/15">
               <img
                 src={
                   currentTrack?.thumbnail ||
-                  "https://i.ytimg.com/vi/3Q8iuY9005E/hqdefault.jpg"
+                  "https://i.ytimg.com/vi/ApXoWvfEYVU/hqdefault.jpg"
                 }
                 alt={currentTrack?.title || "thumbnail"}
                 className={`w-full h-full object-cover transition-transform duration-500 ${
@@ -493,7 +620,7 @@ export default function MusicWidget({ hide = false }: MusicWidgetProps) {
               </p>
             </div>
 
-            {/* Top Right Actions: Heart Like, Video Toggle, Drawer Toggle, Minimize */}
+            {/* Top Right Actions: Like, Video, Drawer, Minimize */}
             <div className="flex items-center space-x-2 text-white/80">
               {currentTrack && (
                 <button
@@ -542,7 +669,7 @@ export default function MusicWidget({ hide = false }: MusicWidgetProps) {
             </div>
           </div>
 
-          {/* Center Controls: Shuffle, Prev, Big Play/Pause, Next, Repeat */}
+          {/* Center Controls: Shuffle, Prev, Play/Pause, Next, Repeat */}
           <div className="flex items-center justify-center space-x-5 py-0.5">
             {/* Shuffle Button */}
             <button
@@ -570,13 +697,13 @@ export default function MusicWidget({ hide = false }: MusicWidgetProps) {
             {/* Big Play/Pause Circular Button */}
             <button
               onClick={togglePlay}
-              className="w-9 h-9 rounded-full bg-white text-black flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition"
+              className="w-10 h-10 rounded-full bg-white text-black flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition"
               title={isPlaying ? "Pause" : "Play"}
             >
               {isPlaying ? (
-                <span className="i-bi:pause-fill text-base" />
+                <span className="i-bi:pause-fill text-lg" />
               ) : (
-                <span className="i-bi:play-fill text-base ml-0.5" />
+                <span className="i-bi:play-fill text-lg ml-0.5" />
               )}
             </button>
 
@@ -618,7 +745,7 @@ export default function MusicWidget({ hide = false }: MusicWidgetProps) {
             >
               {/* Background Track */}
               <div className="w-full h-1 bg-white/20 rounded-full group-hover:h-1.5 transition-all overflow-hidden relative">
-                {/* Orange Gradient Scrubber Fill matching reference screenshot */}
+                {/* Orange Gradient Scrubber Fill */}
                 <div
                   className="h-full bg-gradient-to-r from-orange-500 via-amber-500 to-orange-400 rounded-full transition-all"
                   style={{ width: `${progressPercent}%` }}
@@ -635,8 +762,9 @@ export default function MusicWidget({ hide = false }: MusicWidgetProps) {
 
           {/* Bottom Toolbar: Volume Slider */}
           <div className="flex items-center justify-between pt-1 border-t border-white/10 text-white/70 text-xs">
-            <div className="flex items-center space-x-2 text-white/40">
-              <span className="i-bi:music-note text-xs" />
+            <div className="flex items-center space-x-1 text-white/40 text-[10px]">
+              <span className="i-bi:youtube text-xs text-red-500" />
+              <span className="font-mono">YouTube Music</span>
             </div>
 
             {/* Volume Control */}
@@ -667,17 +795,17 @@ export default function MusicWidget({ hide = false }: MusicWidgetProps) {
           </div>
         </div>
 
-        {/* Expandable YouTube Search & Genre Playlist Drawer */}
+        {/* Expandable YouTube Search & Playlist Drawer */}
         {showDrawer && (
-          <div className="p-3 border-t border-white/15 bg-black/50 rounded-b-3xl flex flex-col space-y-2.5 max-h-[290px]">
+          <div className="p-3 border-t border-white/15 bg-black/60 rounded-b-3xl flex flex-col space-y-2.5 max-h-[310px]">
             {/* Search Input */}
             <form onSubmit={handleSearchSubmit} className="relative flex items-center">
               <input
                 type="text"
-                placeholder="Search any song, artist, video on YouTube..."
+                placeholder="Search song or paste YouTube link/ID..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full h-7 pl-7 pr-7 text-xs bg-white/10 border border-white/15 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-white/40 transition"
+                className="w-full h-7 pl-7 pr-7 text-xs bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-white/50 transition"
               />
               <span className="i-bi:search absolute left-2 text-xs text-white/50" />
               {searchQuery && (
@@ -694,33 +822,19 @@ export default function MusicWidget({ hide = false }: MusicWidgetProps) {
               )}
             </form>
 
-            {/* Genre & Trending Category Chips */}
-            <div className="flex items-center space-x-1.5 overflow-x-auto pb-1 scrollbar-none text-[10px]">
-              {YOUTUBE_GENRES.map((genre) => (
-                <button
-                  key={genre.id}
-                  onClick={() => handleGenreClick(genre)}
-                  className={`px-2 py-0.5 rounded-full whitespace-nowrap transition border ${
-                    activeGenre === genre.id && !searchQuery
-                      ? "bg-white/25 border-white/40 text-white font-semibold"
-                      : "bg-white/5 border-white/10 text-white/70 hover:bg-white/15"
-                  }`}
-                >
-                  {genre.label}
-                </button>
-              ))}
-            </div>
-
             {/* Tracks List */}
-            <div className="flex-1 overflow-y-auto space-y-1 pr-1 max-h-[160px] scrollbar-thin">
+            <div className="flex-1 overflow-y-auto space-y-1 pr-1 max-h-[200px] scrollbar-thin">
               {isLoading ? (
                 <div className="flex items-center justify-center py-6 space-x-2 text-white/60 text-xs">
                   <span className="i-svg-spinners:180-ring-with-bg text-sm text-red-400" />
                   <span>Searching YouTube...</span>
                 </div>
               ) : tracks.length === 0 ? (
-                <div className="text-center py-4 text-xs text-white/50">
-                  No tracks found
+                <div className="text-center py-5 text-xs text-white/50 space-y-1">
+                  <p>No matching tracks found</p>
+                  <p className="text-[10px] text-white/40">
+                    Paste any YouTube URL or 11-char Video ID to play it!
+                  </p>
                 </div>
               ) : (
                 tracks.map((track, idx) => {
@@ -728,10 +842,7 @@ export default function MusicWidget({ hide = false }: MusicWidgetProps) {
                   return (
                     <div
                       key={track.id || idx}
-                      onClick={() => {
-                        setCurrentIndex(idx);
-                        setIsPlaying(true);
-                      }}
+                      onClick={() => playSpecificTrack(idx)}
                       className={`flex items-center justify-between p-1.5 rounded-xl cursor-pointer transition ${
                         isCurrent
                           ? "bg-white/20 border border-white/30 text-white"
